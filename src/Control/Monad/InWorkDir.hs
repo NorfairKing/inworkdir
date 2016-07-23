@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Control.Monad.InWorkDir
   ( MonadInWorkDir(..)
+  , WorkDirT(..)
   , workDirInIO
   , inWorkDirT
   , runWorkDirT
@@ -17,7 +18,6 @@ import           Control.Monad.State
 import           Control.Monad.Writer
 import           Control.Monad.Except
 import           Control.Monad.Reader
-import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Identity
 import           System.Directory             (getCurrentDirectory,
