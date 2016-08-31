@@ -11,30 +11,32 @@ module Control.Monad.InWorkDir
   , runWorkDirT
   ) where
 
-import           Control.Monad.IO.Class
 import           Control.Monad.Base
-import           Control.Monad.State
-import           Control.Monad.Writer
 import           Control.Monad.Except
+import           Control.Monad.IO.Class
 import           Control.Monad.Reader
+import           Control.Monad.State
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Identity
+import           Control.Monad.Writer
+import           Path
+import           Path.IO
 import           System.Directory             (getCurrentDirectory,
                                                setCurrentDirectory)
 
 class Monad m => MonadInWorkDir m where
     -- | Get the currently stored working directory
-    getWorkDir  :: m FilePath
+    getWorkDir  :: m (Path Abs Dir)
 
     -- | Set the currently stored working directory such that subsequent calls
     -- to 'getWorkDir' will return the given filepath
-    setWorkDir  :: FilePath -> m ()
+    setWorkDir  :: Path Abs Dir -> m ()
 
     -- | Change the working directory so that calls to 'getWorkdir' in the
     -- second argument will return the given filepath (unless it is changed
     -- again there).
-    withWorkDir :: FilePath -> m a -> m a
+    withWorkDir :: Path Abs Dir -> m a -> m a
     withWorkDir wd action = do
         before <- getWorkDir
         setWorkDir wd
@@ -42,22 +44,22 @@ class Monad m => MonadInWorkDir m where
         setWorkDir before
         return result
 
-newtype WorkDirT m a = WorkDirT { unWorkDirT :: StateT FilePath m a }
+newtype WorkDirT m a = WorkDirT { unWorkDirT :: StateT (Path Abs Dir) m a }
    deriving (Functor, Applicative, Monad, MonadTrans)
 
 -- | Run a 'WorkDirT' in IO by initialising with the current working and
 -- finalising by setting the working directory at the end.
 workDirInIO :: MonadIO io => WorkDirT io a -> io a
 workDirInIO func = do
-    wd <- liftIO getCurrentDirectory
+    wd <- liftIO getCurrentDir
     (result, wdAfter) <- runWorkDirT func wd
-    liftIO $ setCurrentDirectory wdAfter
+    liftIO $ setCurrentDir wdAfter
     return result
 
-inWorkDirT :: Functor m => FilePath -> WorkDirT m a -> m a
+inWorkDirT :: Functor m => Path Abs Dir -> WorkDirT m a -> m a
 inWorkDirT wd func = fst <$> runWorkDirT func wd
 
-runWorkDirT :: WorkDirT m a -> FilePath -> m (a, FilePath)
+runWorkDirT :: WorkDirT m a -> Path Abs Dir -> m (a, Path Abs Dir)
 runWorkDirT (WorkDirT sa) = runStateT sa
 
 instance Monad m => MonadInWorkDir (WorkDirT m) where
@@ -109,7 +111,7 @@ instance (Monoid w, MonadWriter w m) => MonadWriter w (WorkDirT m) where
     pass (WorkDirT sa) = WorkDirT $ pass sa
 
 instance MonadTransControl WorkDirT where
-    type StT WorkDirT a = StT (StateT FilePath) a
+    type StT WorkDirT a = StT (StateT (Path Abs Dir)) a
     liftWith = defaultLiftWith WorkDirT unWorkDirT
     restoreT = defaultRestoreT WorkDirT
 
