@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 module Control.Monad.InWorkDir
   ( MonadInWorkDir(..)
+  , WorkDirT
   , workDirInIO
   , inWorkDirT
   , runWorkDirT
@@ -13,17 +14,13 @@ module Control.Monad.InWorkDir
 
 import           Control.Monad.Base
 import           Control.Monad.Except
-import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Writer
 import           Path
 import           Path.IO
-import           System.Directory             (getCurrentDirectory,
-                                               setCurrentDirectory)
 
 class Monad m => MonadInWorkDir m where
     -- | Get the currently stored working directory
