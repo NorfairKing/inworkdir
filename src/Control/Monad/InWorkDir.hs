@@ -7,9 +7,12 @@
 module Control.Monad.InWorkDir
   ( MonadInWorkDir(..)
   , WorkDirT
+  , WorkDir
   , workDirInIO
   , inWorkDirT
+  , inWorkDir
   , runWorkDirT
+  , runWorkDir
   ) where
 
 import           Control.Monad.Base
@@ -19,6 +22,7 @@ import           Control.Monad.State
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Writer
+import           Data.Functor.Identity
 import           Path
 import           Path.IO
 
@@ -44,6 +48,8 @@ class Monad m => MonadInWorkDir m where
 newtype WorkDirT m a = WorkDirT { unWorkDirT :: StateT (Path Abs Dir) m a }
    deriving (Functor, Applicative, Monad, MonadTrans)
 
+type WorkDir = WorkDirT Identity
+
 -- | Run a 'WorkDirT' in IO by initialising with the current working and
 -- finalising by setting the working directory at the end.
 workDirInIO :: MonadIO io => WorkDirT io a -> io a
@@ -56,8 +62,14 @@ workDirInIO func = do
 inWorkDirT :: Functor m => Path Abs Dir -> WorkDirT m a -> m a
 inWorkDirT wd func = fst <$> runWorkDirT func wd
 
+inWorkDir :: Path Abs Dir -> WorkDir a -> a
+inWorkDir wd func = fst $ runWorkDir func wd
+
 runWorkDirT :: WorkDirT m a -> Path Abs Dir -> m (a, Path Abs Dir)
 runWorkDirT (WorkDirT sa) = runStateT sa
+
+runWorkDir :: WorkDir a -> Path Abs Dir -> (a, Path Abs Dir)
+runWorkDir (WorkDirT sa) p = runIdentity $ runStateT sa p
 
 instance Monad m => MonadInWorkDir (WorkDirT m) where
     getWorkDir = WorkDirT get
