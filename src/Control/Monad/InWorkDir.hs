@@ -19,6 +19,7 @@ import           Control.Monad.Base
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
+import           Control.Monad.Catch
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Writer
@@ -113,6 +114,14 @@ instance MonadError e m => MonadError e (WorkDirT m) where
 instance MonadReader c m => MonadReader c (WorkDirT m) where
     ask = lift ask
     local f (WorkDirT sa) = WorkDirT $ local f sa
+
+instance MonadThrow m => MonadThrow (WorkDirT m) where
+    throwM = lift . throwM
+
+instance MonadCatch m => MonadCatch (WorkDirT m) where
+    catch (WorkDirT func) handler = WorkDirT $ func `catch` \e ->
+        let (WorkDirT handlerfunc) = handler e
+        in handlerfunc
 
 instance (Monoid w, MonadWriter w m) => MonadWriter w (WorkDirT m) where
     tell = lift . tell
